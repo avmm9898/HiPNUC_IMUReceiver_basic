@@ -17,10 +17,10 @@
 #include <QtWidgets/QGridLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
+#include <QtWidgets/QLabel>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QPushButton>
-#include <QtWidgets/QRadioButton>
 #include <QtWidgets/QSpacerItem>
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QTableWidget>
@@ -37,10 +37,9 @@ public:
     QComboBox *Com_combo;
     QPushButton *Com_Refresh_btn;
     QHBoxLayout *horizontalLayout_2;
-    QRadioButton *rf_btn;
+    QLabel *imu_id_label;
     QComboBox *rf_id_combobox;
     QSpacerItem *horizontalSpacer;
-    QRadioButton *imu_btn;
     QHBoxLayout *horizontalLayout_3;
     QPushButton *btn_serial_init;
     QPushButton *btn_serial_stop;
@@ -76,18 +75,16 @@ public:
         horizontalLayout_2->setSpacing(0);
         horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
         horizontalLayout_2->setContentsMargins(-1, 0, -1, -1);
-        rf_btn = new QRadioButton(centralwidget);
-        rf_btn->setObjectName(QStringLiteral("rf_btn"));
-        QSizePolicy sizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
-        sizePolicy.setHorizontalStretch(0);
-        sizePolicy.setVerticalStretch(0);
-        sizePolicy.setHeightForWidth(rf_btn->sizePolicy().hasHeightForWidth());
-        rf_btn->setSizePolicy(sizePolicy);
+        imu_id_label = new QLabel(centralwidget);
+        imu_id_label->setObjectName(QStringLiteral("imu_id_label"));
 
-        horizontalLayout_2->addWidget(rf_btn);
+        horizontalLayout_2->addWidget(imu_id_label);
 
         rf_id_combobox = new QComboBox(centralwidget);
         rf_id_combobox->setObjectName(QStringLiteral("rf_id_combobox"));
+        QSizePolicy sizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(rf_id_combobox->sizePolicy().hasHeightForWidth());
         rf_id_combobox->setSizePolicy(sizePolicy);
 
@@ -96,11 +93,6 @@ public:
         horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
         horizontalLayout_2->addItem(horizontalSpacer);
-
-        imu_btn = new QRadioButton(centralwidget);
-        imu_btn->setObjectName(QStringLiteral("imu_btn"));
-
-        horizontalLayout_2->addWidget(imu_btn);
 
 
         gridLayout->addLayout(horizontalLayout_2, 8, 0, 1, 1);
@@ -131,7 +123,7 @@ public:
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
-        menubar->setGeometry(QRect(0, 0, 546, 26));
+        menubar->setGeometry(QRect(0, 0, 546, 27));
         MainWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName(QStringLiteral("statusbar"));
@@ -146,8 +138,7 @@ public:
     {
         MainWindow->setWindowTitle(QApplication::translate("MainWindow", "\350\266\205\346\240\270IMU Receiver", Q_NULLPTR));
         Com_Refresh_btn->setText(QApplication::translate("MainWindow", "Refresh", Q_NULLPTR));
-        rf_btn->setText(QApplication::translate("MainWindow", "Wireless Receiver, ID=", Q_NULLPTR));
-        imu_btn->setText(QApplication::translate("MainWindow", "IMU", Q_NULLPTR));
+        imu_id_label->setText(QApplication::translate("MainWindow", "IMU", Q_NULLPTR));
         btn_serial_init->setText(QApplication::translate("MainWindow", "Start Connection", Q_NULLPTR));
         btn_serial_stop->setText(QApplication::translate("MainWindow", "Stop Connection", Q_NULLPTR));
     } // retranslateUi

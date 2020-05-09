@@ -31,7 +31,6 @@ private slots:
     void read_serial();
     void get_data();
     void on_Com_Refresh_btn_clicked();
-    void on_rf_btn_clicked();
     void on_btn_serial_stop_clicked();
 
 private:

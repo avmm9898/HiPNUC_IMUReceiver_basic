@@ -5,19 +5,15 @@
 
 C++ QT example.Here are 3 steps to follow,
  1. "imu_data_decode_init()" -> is for the RFreceiver and the node to initiate
- 2. "kptl_decode(c)" -> to decode every character from serial port.
- 3. Declare a "imu_data_t imu", and call the function "dump_rf_data(&imu)" or "dump_imu_data(&imu)";
-    it will pass the data to your "imu"
- 4. If you are using wireless receiver, you need to change "rf_slave_cnt" in imu_data_decode.cpp, or program will crash.
-    the datatypes in imu_data_t: see "imu_data_decode.h", RF means RFceiver.
+ 2. "packet_decode(c)" -> to decode every character from serial port.
+ 3. while decoding, "receive_imusol", the data received from IMU, which will update itself in real-time.
+ 4. If you are using wireless receiver, "receive_gwsol" is the data received, and it's array of multiple receive_imusol.
 
  C++ QT 範例:
- 1. "imu_data_decode_init()" -> 初始化一次 RFreceiver 和 node
- 2. "kptl_decode(c)" -> 接收到來自序列的單個字元並解析
- 3. 宣告 "imu_data_t imu", 透過 "dump_rf_data(&imu)"(無線接收器)或 "dump_imu_data(&imu)"(USB節點);
-    將數據存入"imu".
- 4. 若使用無線接收器, 必須設定在 imu_data_decode.cpp 設定 "rf_slave_cnt" 的值為節點數量 ,
-    節點 ID 必須依照順序從 0 開始設定 , 否則會閃退.
+ 1."imu_data_decode_init（）"->用於RFreceiver和要啟動的節點
+ 2."packet_decode(c)"->從序列端口解碼每個字符。
+ 3.在解碼的同時，"receive_imusol"會根據IMU接收的數據進行即時更新。
+ 4.如果使用的是無線接收器，則"receive_gwsol"將會是接收到的數據，它是多個"receive_imusol"的組合。
 
 */
 MainWindow::MainWindow(QWidget *parent)
@@ -27,13 +23,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     foreach (const QSerialPortInfo &info, QSerialPortInfo::availablePorts())
     {
-
-        //qDebug() << "Name : "<< com_info.portName();
-        //qDebug() << "Description : "  << com_info.description();
-        //qDebug() << "Serial Number: " << com_info.serialNumber();
         ui->Com_combo->addItem(info.portName()+" : "+info.description());
     }
-    ui->imu_btn->setChecked(1);
+    ui->rf_id_combobox->setVisible(false);
 
     /********setting table**********/
 
@@ -43,7 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->tableWidget->horizontalHeader()->setVisible(false);
 
     QString title1="Quaternion,W,X,Y,Z";
-    QString title2="Euler Angle,Pitch,Roll,Yaw";
+    QString title2="Euler Angle,Roll,Pitch,Yaw";
     QString title3="Acceleration,X,Y,Z";
     QString title4="Gyroscope,X,Y,Z";
     QString title5="Magnetic field,X,Y,Z";
@@ -103,6 +95,7 @@ MainWindow::~MainWindow()
 void MainWindow::on_btn_serial_init_clicked()
 {
 
+    //finding usable port on your computer
     QString m_PortName = ui->Com_combo->currentText().split(" : ").at(0);
     m_reader.setPortName(m_PortName);
 
@@ -120,6 +113,7 @@ void MainWindow::on_btn_serial_init_clicked()
 
     }
 
+    //initiaate hi221/226/229 at the begining
     imu_data_decode_init();
 
     //set a timer to display data from port
@@ -129,10 +123,18 @@ void MainWindow::on_btn_serial_init_clicked()
 
 
 }
+void MainWindow::on_btn_serial_stop_clicked()
+{
+    ui->rf_id_combobox->setVisible(false);
+    ui->rf_id_combobox->clear();
+    m_reader.disconnect();
+    display_timer.disconnect();
+    m_reader.close();
 
+}
 void MainWindow::read_serial()
 {
-    //qDebug() << "read";
+
     auto NumberOfBytesToRead = m_reader.bytesAvailable();
 
     if(NumberOfBytesToRead > 0 && m_reader.isReadable())
@@ -151,23 +153,34 @@ void MainWindow::get_data()
 {
 
 
+    qDebug()<<receive_gwsol.tag;
     if(receive_gwsol.tag != KItemGWSOL)
     {
         /* imu data packet */
+
         ShowOnTable(receive_imusol);
+        if(ui->rf_id_combobox->isVisible()){
+            ui->rf_id_combobox->setVisible(false);
+        }
+        ui->imu_id_label->setText("IMU(ID = "+QString::number(receive_imusol.id)+")");
     }
     else
     {
+        if(!ui->rf_id_combobox->isVisible()){
+            ui->rf_id_combobox->setVisible(true);
+            for (int i=0;i<receive_gwsol.n;i++) {
+                ui->rf_id_combobox->addItem(QString::number(i));
+            }
+        }
         int slave_id=ui->rf_id_combobox->currentIndex();
-        /* wireless data packet */
 
+        /* wireless data packet */
         for(int i = 0; i < receive_gwsol.n; i++)
         {
             if(QString::number(receive_gwsol.gw_id)!="")
-                ui->imu_btn->setText("IMU(ID = "+QString::number(receive_gwsol.gw_id)+")");
-            else
-                ui->imu_btn->setText("IMU(ID = Nan)");
+                ui->imu_id_label->setText("Wireless IMU, ID = ");
             ShowOnTable(receive_gwsol.receive_imusol[slave_id]);
+
 
         }
     }
@@ -214,7 +227,7 @@ void MainWindow::ShowOnTable(receive_imusol_packet_t imu)
         protoitem->setTextAlignment(Qt::AlignCenter);
         ui->tableWidget->setItem(5,i+1,protoitem);
         if(i==2){
-            ui->tableWidget->setItem(5,4,new QTableWidgetItem("0.001G"));
+            ui->tableWidget->setItem(5,4,new QTableWidgetItem("1G"));
         }
     }
 
@@ -224,7 +237,7 @@ void MainWindow::ShowOnTable(receive_imusol_packet_t imu)
         protoitem->setTextAlignment(Qt::AlignCenter);
         ui->tableWidget->setItem(7,i+1,protoitem);
         if(i==2){
-            ui->tableWidget->setItem(7,4,new QTableWidgetItem("0.1°/s"));
+            ui->tableWidget->setItem(7,4,new QTableWidgetItem("1°/s"));
         }
     }
 
@@ -234,21 +247,11 @@ void MainWindow::ShowOnTable(receive_imusol_packet_t imu)
         protoitem->setTextAlignment(Qt::AlignCenter);
         ui->tableWidget->setItem(9,i+1,protoitem);
         if(i==2){
-            ui->tableWidget->setItem(9,4,new QTableWidgetItem("0.001Gauss"));
+            ui->tableWidget->setItem(9,4,new QTableWidgetItem("0.01Gauss"));
         }
     }
 }
 
-void MainWindow::on_rf_btn_clicked()
-{
-    for (int i=0;i<receive_gwsol.n;i++) {
-        ui->rf_id_combobox->addItem(QString::number(i));
-    }
-}
 
-void MainWindow::on_btn_serial_stop_clicked()
-{
-    m_reader.disconnect();
-    display_timer.disconnect();
-    m_reader.close();
-}
+
+
