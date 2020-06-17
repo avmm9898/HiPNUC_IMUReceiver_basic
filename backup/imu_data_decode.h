@@ -5,35 +5,34 @@
 #include <stdbool.h>
 #define MAX_LENGTH 16
 
-extern uint8_t bitmap;
 extern uint32_t frame_count;
-#define BIT_VALID_ID     (0x01)
-#define BIT_VALID_ACC    (0x02)
-#define BIT_VALID_GYR    (0x04)
-#define BIT_VALID_MAG    (0x08)
-#define BIT_VALID_EUL    (0x10)
-#define BIT_VALID_QUAT   (0x20)
-#define BIT_VALID_TIMES  (0x40)
-#define BIT_VALID_ALL  (BIT_VALID_QUAT | BIT_VALID_EUL | BIT_VALID_MAG | BIT_VALID_GYR | BIT_VALID_ACC | BIT_VALID_ID | BIT_VALID_TIMES)
+extern uint8_t bitmap;
 
-typedef struct receive_imusol_packet_t {
+#define BIT_VALID_ID   (0)
+#define BIT_VALID_ACC  (1)
+#define BIT_VALID_GYR  (2)
+#define BIT_VALID_MAG  (3)
+#define BIT_VALID_EUL  (4)
+#define BIT_VALID_QUAT (5)
+#define BIT_VALID_ALL  (0x3F)
+
+typedef struct receive_imusol_packet_t{
 	uint8_t tag;
 	uint8_t id;
-	uint32_t times;
 	float acc[3];
 	float gyr[3];
-	float mag[3]; 
+	float mag[3];
 	float eul[3];
 	float quat[4];
 
-} receive_imusol_packet_t;
+}receive_imusol_packet_t;
 
-typedef struct receive_gwsol_packet_t {
+typedef struct receive_gwsol_packet_t{
 	uint8_t tag;
 	uint8_t gw_id;
 	uint8_t n;
 	receive_imusol_packet_t receive_imusol[MAX_LENGTH];
-} receive_gwsol_packet_t;
+}receive_gwsol_packet_t;
 	 
 extern receive_imusol_packet_t receive_imusol;
 extern receive_gwsol_packet_t receive_gwsol;
@@ -54,6 +53,6 @@ typedef enum
 
 int imu_data_decode_init(void);
 
-#endif 
+#endif
 
  

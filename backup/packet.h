@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #define MAX_PACKET_LEN          (2048)
+
 typedef struct
 {
     uint32_t ofs;

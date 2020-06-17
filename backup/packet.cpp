@@ -99,9 +99,7 @@ uint32_t packet_decode(uint8_t c)
     {
         case kStatus_Idle:
             if(c == 0x5A)
-			{
-				status = kStatus_Cmd;
-			}
+                status = kStatus_Cmd;
 			break;
         case kStatus_Cmd:
             RxPkt->type = c;
