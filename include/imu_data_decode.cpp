@@ -4,16 +4,11 @@
 #include "packet.h"
 #include "imu_data_decode.h"
 
-
-
 static packet_t RxPkt; /* used for data receive */
 /*
  **采用结构体来保存数据
  **将标志位都集中到一个32位的变量上，用位来表示
- **在复制数据时，在用户程序中直接调用一个memcpu函数
- **
- *
- *
+ **在复制数据时，在用户程序中直接调用一个memcpy函数
  */
 
 uint8_t bitmap;
@@ -37,21 +32,65 @@ static void on_data_received(packet_t *pkt)
 	int offset = 0;
 	uint8_t *p = pkt->buf;
 
-
 	if(pkt->type != 0xA5)
-    {
-        return;
-    }
+	{
+		return;
+	}
 
 	while(offset < pkt->payload_len)
 	{
 		if(offset == 0)
 		{
 			frame_count++;	
-   		    bitmap = 0;
+			bitmap = 0;
 		}
 		switch(p[offset])
 		{
+		case kItemID:
+			bitmap |= BIT_VALID_ID;
+			receive_imusol.id = p[1];
+			offset += 2;
+			break;
+		case kItemAccRaw:
+			bitmap |= BIT_VALID_ACC;
+			stream2int16(temp, p + offset + 1);
+			receive_imusol.acc[0] = (float)temp[0] / 1000;
+			receive_imusol.acc[1] = (float)temp[1] / 1000;
+			receive_imusol.acc[2] = (float)temp[2] / 1000;
+			offset += 7;
+			break;
+		case kItemGyrRaw:
+			bitmap |= BIT_VALID_GYR;
+			stream2int16(temp, p + offset + 1);
+			receive_imusol.gyr[0] = (float)temp[0] / 10;
+			receive_imusol.gyr[1] = (float)temp[1] / 10;
+			receive_imusol.gyr[2] = (float)temp[2] / 10;
+			offset += 7;
+			break;
+		case kItemMagRaw:
+			bitmap |= BIT_VALID_MAG;
+			stream2int16(temp, p + offset + 1);
+			receive_imusol.mag[0] = (float)temp[0] / 10;
+			receive_imusol.mag[1] = (float)temp[1] / 10;
+			receive_imusol.mag[2] = (float)temp[2] / 10;
+			offset += 7;
+			break;
+		case kItemRotationEul:
+			bitmap |= BIT_VALID_EUL;
+			stream2int16(temp, p + offset + 1);
+			receive_imusol.eul[1] = (float)temp[0] / 100;
+			receive_imusol.eul[0] = (float)temp[1] / 100;
+			receive_imusol.eul[2] = (float)temp[2] / 10;
+			offset += 7;
+			break;
+		case kItemRotationQuat:
+			bitmap |= BIT_VALID_QUAT;
+			memcpy(receive_imusol.quat, p + offset + 1, sizeof( receive_imusol.quat));
+			offset += 17;
+			break;
+		case kItemPressure:
+			offset += 5;
+			break; 
 
 		case KItemIMUSOL:
 			bitmap = BIT_VALID_ALL;
@@ -80,9 +119,8 @@ static void on_data_received(packet_t *pkt)
 			break;
 		default:
 			offset++;
-
 		}
-    }
+	}
 }
 
 
