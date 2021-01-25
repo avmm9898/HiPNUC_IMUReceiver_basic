@@ -27,7 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
     ui->rf_id_combobox->setVisible(false);
 
-    /********setting table**********/
+    /********setting UI table**********/
 
     ui->tableWidget->setRowCount(10);
     ui->tableWidget->setColumnCount(5);
@@ -83,6 +83,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->tableWidget->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    ui->btn_serial_init->setEnabled(true);
+    ui->btn_serial_stop->setEnabled(false);
+    /********end of setting UI table**********/
 }
 
 
@@ -95,14 +99,23 @@ MainWindow::~MainWindow()
 void MainWindow::on_btn_serial_init_clicked()
 {
 
+    if(m_reader.isOpen())
+        m_reader.close();
+
     //finding usable port on your computer
     QString m_PortName = ui->Com_combo->currentText().split(" : ").at(0);
+
+    //for example, m_PortName="COM1"
     m_reader.setPortName(m_PortName);
+
+    //important!!! set the right Baudrate here, need to be same with the IMU
+    //options : 115200, 460800, 921600
+    int m_baudrate=115200;
 
     if(m_reader.open(QIODevice::ReadWrite))
     {
 
-        m_reader.setBaudRate(QSerialPort::Baud115200);
+        m_reader.setBaudRate(m_baudrate);
         m_reader.setParity(QSerialPort::NoParity);
         m_reader.setDataBits(QSerialPort::Data8);
         m_reader.setStopBits(QSerialPort::OneStop);
@@ -113,23 +126,30 @@ void MainWindow::on_btn_serial_init_clicked()
 
     }
 
-    //initiaate hi221/226/229 at the begining
+    //initiaate device at the begining
     imu_data_decode_init();
 
     //set a timer to display data from port
     connect(&display_timer, SIGNAL(timeout()), this, SLOT(get_data()));
     display_timer.start(50);
 
-
+    if(m_reader.isOpen()){
+        ui->btn_serial_init->setEnabled(false);
+        ui->btn_serial_stop->setEnabled(true);
+    }
 
 }
 void MainWindow::on_btn_serial_stop_clicked()
 {
-    ui->rf_id_combobox->setVisible(false);
-    ui->rf_id_combobox->clear();
-    m_reader.disconnect();
-    display_timer.disconnect();
-    m_reader.close();
+    if(m_reader.isOpen()){
+        ui->rf_id_combobox->setVisible(false);
+        ui->rf_id_combobox->clear();
+        m_reader.disconnect();
+        display_timer.disconnect();
+        m_reader.close();
+        ui->btn_serial_init->setEnabled(true);
+        ui->btn_serial_stop->setEnabled(false);
+    }
 
 }
 void MainWindow::read_serial()
@@ -154,6 +174,9 @@ void MainWindow::get_data()
 
 
     qDebug()<<receive_gwsol.tag;
+
+
+    //handle single IMU, such as HI221/226/229/CH100/CH110
     if(receive_gwsol.tag != KItemGWSOL)
     {
         /* imu data packet */
@@ -162,8 +185,10 @@ void MainWindow::get_data()
         if(ui->rf_id_combobox->isVisible()){
             ui->rf_id_combobox->setVisible(false);
         }
-        ui->imu_id_label->setText("IMU(ID = "+QString::number(receive_imusol.id)+")");
+        ui->imu_id_label->setText(tr("IMU(ID=%1)").arg(receive_imusol.id));
     }
+
+    //handle multiple IMU, such as HI221 Dongle
     else
     {
         if(!ui->rf_id_combobox->isVisible()){
@@ -190,6 +215,7 @@ void MainWindow::get_data()
 
 void MainWindow::on_Com_Refresh_btn_clicked()
 {
+    //search usable COM port
     ui->Com_combo->clear();
     foreach (const QSerialPortInfo &info, QSerialPortInfo::availablePorts())
     {
@@ -203,16 +229,23 @@ void MainWindow::on_Com_Refresh_btn_clicked()
 
 void MainWindow::ShowOnTable(receive_imusol_packet_t imu)
 {
+
+
     for(int i=0;i<4;i++){
+        //get float from imu.quat[i]
         QString item= QString::number(imu.quat[i],'f',3);
+
+        //display in table
         QTableWidgetItem * protoitem = new QTableWidgetItem(item);
         protoitem->setTextAlignment(Qt::AlignCenter);
-
         ui->tableWidget->setItem(1,i+1,protoitem);
     }
 
     for(int i=0;i<3;i++){
+        //get float from imu.eul[i]
         QString item= QString::number(imu.eul[i],'f',3);
+
+        //display in table
         QTableWidgetItem * protoitem = new QTableWidgetItem(item);
         protoitem->setTextAlignment(Qt::AlignCenter);
         ui->tableWidget->setItem(3,i+1,protoitem);
@@ -222,7 +255,10 @@ void MainWindow::ShowOnTable(receive_imusol_packet_t imu)
     }
 
     for(int i=0;i<3;i++){
+        //get float from imu.acc[i]
         QString item= QString::number(imu.acc[i]);
+
+        //display in table
         QTableWidgetItem * protoitem = new QTableWidgetItem(item);
         protoitem->setTextAlignment(Qt::AlignCenter);
         ui->tableWidget->setItem(5,i+1,protoitem);
@@ -232,7 +268,10 @@ void MainWindow::ShowOnTable(receive_imusol_packet_t imu)
     }
 
     for(int i=0;i<3;i++){
+        //get float from imu.gyr[i]
         QString item= QString::number(imu.gyr[i]);
+
+        //display in table
         QTableWidgetItem * protoitem = new QTableWidgetItem(item);
         protoitem->setTextAlignment(Qt::AlignCenter);
         ui->tableWidget->setItem(7,i+1,protoitem);
@@ -242,7 +281,10 @@ void MainWindow::ShowOnTable(receive_imusol_packet_t imu)
     }
 
     for(int i=0;i<3;i++){
+        //get float from imu.mag[i]
         QString item= QString::number(imu.mag[i]);
+
+        //display in table
         QTableWidgetItem * protoitem = new QTableWidgetItem(item);
         protoitem->setTextAlignment(Qt::AlignCenter);
         ui->tableWidget->setItem(9,i+1,protoitem);
